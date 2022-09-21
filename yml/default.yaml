@@ -1,0 +1,31 @@
+config_name: 'default'
+model: 'ResNet'
+optimizer: 
+  name: Adam
+  lr: 0.01
+  amsgrad: true
+train_loader:
+  batch_size: 128
+  shuffle: true
+  drop_last: true
+  pin_memory: 2
+  num_workers: 2
+valid_loader:
+  batch_size: 128
+  shuffle: False
+  pin_memory: true
+  num_workers: 2
+test_loader:
+  batch_size: 20
+  shuffle: false
+  pin_memory: true
+  num_workers: 2
+
+deg_min: 10
+deg_max: 10
+patience: 30
+iteration: 100000
+shots: 400
+way: 20
+valid_step: 100
+seed: 9999
