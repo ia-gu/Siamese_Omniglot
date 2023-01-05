@@ -7,8 +7,7 @@ import random
 from PIL import Image
 import csv
 
-# SiameseNet用のデータローダを自作
-# 学習時
+# dataloader for training
 class OmniglotTrain(Dataset):
 
     def __init__(self, dataPath, train='train', transform=None):
@@ -21,12 +20,11 @@ class OmniglotTrain(Dataset):
         datas = {}
         agrees = [0]
         idx = 0
-        # csvを基準に，train/validで使用するデータを分ける分割
         with open('../../data/meta-dataset/csv/omniglot.csv', mode='r') as f:
             reader = csv.reader(f)
             dict_from_csv = {rows[2]:rows[3] for rows in reader}
 
-        # 使用データ読み込み
+        # load data
         for agree in agrees:
             for alphaPath in os.listdir(dataPath):
                 if(dict_from_csv[alphaPath+'-character01']==train):
@@ -39,22 +37,20 @@ class OmniglotTrain(Dataset):
         print("finish loading training dataset to memory")
         return datas, idx
 
-    # データサイズ
     def __len__(self):
         return 21000000
 
-    # データ，ラベルをセットで作成．
     def __getitem__(self, index):
         label = None
 
-        # 同クラス
+        # from the same class
         if index % 2 == 1:
             label = 1.0
             idx1 = random.randint(0, self.num_classes - 1)
             image1 = random.choice(self.datas[idx1])
             image2 = random.choice(self.datas[idx1])
             
-        # 他クラス
+        # from the different class
         else:
             label = 0.0
             idx1 = random.randint(0, self.num_classes - 1)
@@ -64,7 +60,6 @@ class OmniglotTrain(Dataset):
             image1 = random.choice(self.datas[idx1])
             image2 = random.choice(self.datas[idx2])
 
-        # 前処理
         if self.transform:
             image1 = self.transform(image1)
             image2 = self.transform(image2)
@@ -72,8 +67,7 @@ class OmniglotTrain(Dataset):
         return image1, image2, torch.from_numpy(np.array([label], dtype=np.float32))
 
 
-# テスト時
-# 20クラス分類を行うために学習時とはちょっと違う実装
+# dataloader for testing
 class OmniglotTest(Dataset):
 
     def __init__(self, dataPath, transform=None, times=200, way=20):
@@ -85,7 +79,6 @@ class OmniglotTest(Dataset):
         self.c1 = None
         self.datas, self.num_classes = self.loadToMem(dataPath)
 
-    # 学習時と同様
     def loadToMem(self, dataPath):
         print("begin loading test dataset to memory")
         datas = {}
@@ -109,13 +102,11 @@ class OmniglotTest(Dataset):
     def __getitem__(self, index):
         idx = index % self.way
         label = None
-        # 同クラスの場合(ミニバッチの先頭)
         if idx == 0:
             label = 1.0
             self.c1 = random.randint(0, self.num_classes - 1)
             self.img1 = random.choice(self.datas[self.c1])
             img2 = random.choice(self.datas[self.c1])
-        # 他クラスの場合(先頭以外)
         else:
             label = 0.0
             c2 = random.randint(0, self.num_classes - 1)

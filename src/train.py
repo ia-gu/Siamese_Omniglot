@@ -21,12 +21,11 @@ import argparse
 import yaml
 import csv
 
-# 大基 実行～学習を行う
 if __name__ == '__main__':
     # get config
     def get_args():
-        parser = argparse.ArgumentParser(description='YAMLありの例')
-        parser.add_argument('config_path', type=str, help='設定ファイル(.yaml)')
+        parser = argparse.ArgumentParser(description='YAML')
+        parser.add_argument('config_path', type=str, help='.yaml')
         args = parser.parse_args()
         return args
     args = get_args()
@@ -58,33 +57,27 @@ if __name__ == '__main__':
     torch.manual_seed(seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-    def worker_init_fn(worker_id):
-        worker_seed = torch.initial_seed() % 2**32
-        np.random.seed(worker_seed)
-        random.seed(worker_seed)
-    g = torch.Generator()
-    g.manual_seed(seed)
 
     # dataset
     trainSet = OmniglotTrain('../../data/omniglot/images_background', 'train', transform=data_transforms)
     validSet = OmniglotTrain('../../data/omniglot/images_background', 'validation', transform=data_transforms)
-    trainLoader = DataLoader(trainSet, **config['train_loader'], worker_init_fn=worker_init_fn, generator=g)
-    validLoader = DataLoader(validSet, **config['valid_loader'], worker_init_fn=worker_init_fn, generator=g)
+    trainLoader = DataLoader(trainSet, **config['train_loader'])
+    validLoader = DataLoader(validSet, **config['valid_loader'])
 
     # loss
     loss_fn = nn.BCEWithLogitsLoss(size_average=True)
 
     def initialize_weights(m):
-        if isinstance(m, nn.Conv2d): # Convolution層が引数に渡された場合
-            nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu') # kaimingの初期化
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
             if m.bias is not None:
-                nn.init.constant_(m.bias.data, 0)   # bias項は0に初期化
-        elif isinstance(m, nn.BatchNorm2d):         # BatchNormalization層が引数に渡された場合
+                nn.init.constant_(m.bias.data, 0)
+        elif isinstance(m, nn.BatchNorm2d):
             nn.init.constant_(m.weight.data, 1)
             nn.init.constant_(m.bias.data, 0)
-        elif isinstance(m, nn.Linear):              # 全結合層が引数に渡された場合
-            nn.init.kaiming_normal_(m.weight.data)  # kaimingの初期化
-            nn.init.constant_(m.bias.data, 0)       # biasは0に初期化
+        elif isinstance(m, nn.Linear):
+            nn.init.kaiming_normal_(m.weight.data)
+            nn.init.constant_(m.bias.data, 0)
     
     # define model
     if(config['model'] == 'Siamese'):
@@ -93,16 +86,11 @@ if __name__ == '__main__':
         model = VGG(64)
     elif(config['model'] == 'ResNet'):
         model = ResNet18()
-        # model = PretrainedResNet(False)
     logging.error(config['model'])
 
     model.to(device)
     model.apply(initialize_weights)
-    save_model = model 
-    model = nn.DataParallel(save_model)
-    summary(model)
-    # model = nn.DataParallel(model)
-
+    model = nn.DataParallel(model)
 
     # optimizer
     def make_optimizer(params, name, **kwargs):
@@ -120,7 +108,7 @@ if __name__ == '__main__':
     train_loss = 0
     train_acc = 0
     time_start = time.time()
-    earlystopping = EarlyStopping(config['patience'], verbose=True, path = dir_path+'weight_best.pth')
+    earlystopping = EarlyStopping(config['patience'], path = dir_path+'weight_best.pth')
 
     print('start train phase')
 
@@ -196,7 +184,7 @@ if __name__ == '__main__':
     
     # save weight
     logging.error(optimizer)
-    torch.save(save_model.state_dict(), dir_path+'weight.pth')
+    torch.save(model.module.state_dict(), dir_path+'weight.pth')
 
     # save csv
     with open(dir_path+'result.csv', 'w') as f:
