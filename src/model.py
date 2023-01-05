@@ -98,8 +98,6 @@ class VGG(nn.Module):
         return out
 
 
-# EncoderをResNet18(自作)に変更
-# 実は本物のResNet18と少しだけ違う(精度が上がる)
 def conv3x3(in_channels, out_channels, stride=1, groups=1, dilation=1):
     return nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride,
                     padding=dilation, groups=groups, bias=True,
@@ -197,8 +195,8 @@ class ResNet18(nn.Module):
         out = self.out(dis)
         return out
 
-# EncoderをResNet18(PyTorchモデル)に変更
-# レべチで早い
+# ResNet from PyTorch
+# Much faster than the hand-made ResNet
 class PretrainedResNet(nn.Module):
     def __init__(self, pretrain):
         super().__init__()
